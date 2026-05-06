@@ -204,18 +204,39 @@
 
 <script>
     // 1. 模拟数据仓库 (内置示例素材)
+    // 1. 模拟数据仓库 (内置扩充版)
     const materials = {
         'en-zh': [
+            // Level 1: 简短日常对话
             { level: 1, src: "Hello, nice to meet you.", target: "你好，很高兴见到你。", keywords: ["你好", "高兴", "见到"] },
             { level: 1, src: "The weather is very good today.", target: "今天天气很好。", keywords: ["今天", "天气", "好"] },
+            { level: 1, src: "Can I have the menu, please?", target: "请给我菜单好吗？", keywords: ["菜单", "请"] },
+            { level: 1, src: "What time is the flight?", target: "航班几点起飞？", keywords: ["航班", "几点", "时间"] },
+            { level: 1, src: "I need a glass of water.", target: "我需要一杯水。", keywords: ["需要", "一杯", "水"] },
+            // Level 2: 中等长度商务/工作交流
             { level: 2, src: "We have seen significant growth in our revenue this quarter.", target: "本季度我们的收入出现了显著增长。", keywords: ["季度", "收入", "显著", "增长"] },
             { level: 2, src: "Please review the attached document before the meeting.", target: "请在会议前审阅随附的文件。", keywords: ["会议", "审阅", "查看", "文件", "附件"] },
-            { level: 3, src: "The implementation of the new policy will invariably lead to a paradigm shift in the industry.", target: "新政策的实施必将导致行业内范式的转变。", keywords: ["政策", "实施", "导致", "行业", "范式", "转变"] }
+            { level: 2, src: "Our team will finish the software update by tomorrow morning.", target: "我们的团队将在明早前完成软件更新。", keywords: ["团队", "软件", "更新", "明早", "完成"] },
+            { level: 2, src: "The project deadline has been extended to next Friday.", target: "项目截止日期已延期至下周五。", keywords: ["项目", "截止日期", "延期", "下周五"] },
+            { level: 2, src: "Can you provide a brief summary of the client's requirements?", target: "你能简要总结一下客户的需求吗？", keywords: ["总结", "客户", "需求"] },
+            // Level 3: 较长、结构复杂的正式/学术表达
+            { level: 3, src: "The implementation of the new policy will invariably lead to a paradigm shift in the industry.", target: "新政策的实施必将导致行业内范式的转变。", keywords: ["政策", "实施", "导致", "行业", "范式", "转变"] },
+            { level: 3, src: "Despite the economic downturn, our company managed to secure a substantial round of funding.", target: "尽管经济低迷，我们公司还是设法获得了一笔可观的融资。", keywords: ["尽管", "经济低迷", "公司", "获得", "融资"] },
+            { level: 3, src: "Artificial intelligence algorithm design requires balancing computational efficiency with accuracy.", target: "人工智能算法设计需要在计算效率与准确性之间取得平衡。", keywords: ["人工智能", "算法", "设计", "计算效率", "准确性", "平衡"] }
         ],
         'zh-en': [
+            // Level 1
             { level: 1, src: "谢谢你的帮助。", target: "Thank you for your help.", keywords: ["thank", "help"] },
+            { level: 1, src: "请问洗手间在哪里？", target: "Excuse me, where is the restroom?", keywords: ["excuse", "where", "restroom", "toilet"] },
+            { level: 1, src: "我们现在出发吧。", target: "Let's go now.", keywords: ["let", "go", "now"] },
+            { level: 1, src: "这个多少钱？", target: "How much is this?", keywords: ["how", "much"] },
+            // Level 2
             { level: 2, src: "我们将在下周五举行产品发布会。", target: "We will hold a product launch event next Friday.", keywords: ["hold", "product", "launch", "next", "Friday"] },
-            { level: 3, src: "鉴于目前的市场波动，我们建议采取保守的投资策略。", target: "Given the current market volatility, we recommend adopting a conservative investment strategy.", keywords: ["given", "market", "volatility", "recommend", "conservative", "investment", "strategy"] }
+            { level: 2, src: "请确保所有的数据都已备份。", target: "Please ensure that all data has been backed up.", keywords: ["ensure", "make sure", "all", "data", "backed up"] },
+            { level: 2, src: "抱歉我迟到了，路上交通很拥堵。", target: "Sorry I'm late, the traffic was heavy.", keywords: ["sorry", "late", "traffic", "heavy", "bad"] },
+            // Level 3
+            { level: 3, src: "鉴于目前的市场波动，我们建议采取保守的投资策略。", target: "Given the current market volatility, we recommend adopting a conservative investment strategy.", keywords: ["given", "market", "volatility", "recommend", "conservative", "investment", "strategy"] },
+            { level: 3, src: "优化系统架构是为了支持未来更多用户的并发访问。", target: "Optimizing the system architecture is to support concurrent access by more users in the future.", keywords: ["optimizing", "system", "architecture", "support", "concurrent", "access", "future"] }
         ]
     };
 
@@ -229,6 +250,7 @@
         consecutiveCorrect: 0,
         consecutiveWrong: 0,
         currentTask: null,
+        lastTaskSrc: null, // 新增：记录上一次的题目原文，用于去重
         isRecording: false
     };
 
@@ -279,7 +301,9 @@
 
     function loadNextTask() {
         els.feedbackArea.classList.remove('visible');
-        const pool = materials[state.mode].filter(m => m.level === state.difficulty);
+        
+        // 1. 筛出当前难度的题目池
+        let pool = materials[state.mode].filter(m => m.level === state.difficulty);
         
         if (pool.length === 0) {
             // 如果当前难度没有题了，降级处理
@@ -288,8 +312,16 @@
             return;
         }
 
-        // 随机抽取一句
+        // 2. 去重逻辑：如果池子里不止一道题，且存在上一题的记录，就剔除上一题
+        if (pool.length > 1 && state.lastTaskSrc) {
+            pool = pool.filter(m => m.src !== state.lastTaskSrc);
+        }
+
+        // 3. 随机抽取一句
         state.currentTask = pool[Math.floor(Math.random() * pool.length)];
+        
+        // 4. 更新状态
+        state.lastTaskSrc = state.currentTask.src; 
         els.sourceText.textContent = state.currentTask.src;
         updateStatsUI();
     }
