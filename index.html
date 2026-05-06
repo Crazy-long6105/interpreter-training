@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简口译训练系统</title>
+    <title>极简口译训练系统 v1.1</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -45,11 +45,31 @@
             border-bottom: 1px solid #eee;
         }
 
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .controls select {
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid #ccc;
             font-size: 14px;
+        }
+
+        .import-btn {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .import-btn:hover {
+            background: #f0f0f0;
         }
 
         .stats {
@@ -148,15 +168,19 @@
                 <option value="en-zh">英译中 (EN → ZH)</option>
                 <option value="zh-en">中译英 (ZH → EN)</option>
             </select>
+            <!-- 导入素材按钮 -->
+            <button id="importBtn" class="import-btn">📁 导入素材</button>
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
         </div>
         <div class="stats">
-            当前难度: <span id="diffLevel">初级 (Level 1)</span> | 
+            题库: <span id="totalSentences">0</span> 句 | 
+            难度: Level <span id="diffLevel">1</span> | 
             连对: <span id="streakCount">0</span>
         </div>
     </div>
 
     <div class="source-text" id="sourceText">
-        请点击下方按钮开始您的口译训练。
+        加载中...
     </div>
 
     <div class="action-area">
@@ -195,6 +219,9 @@
         ]
     };
 
+    // 1.1 本地存储常量
+    const STORAGE_KEY = 'interpreter_materials_v1';
+
     // 2. 状态管理
     const state = {
         mode: 'en-zh',
@@ -210,6 +237,7 @@
         modeSelect: document.getElementById('modeSelect'),
         diffLevel: document.getElementById('diffLevel'),
         streakCount: document.getElementById('streakCount'),
+        totalSentences: document.getElementById('totalSentences'),
         sourceText: document.getElementById('sourceText'),
         recordBtn: document.getElementById('recordBtn'),
         statusText: document.getElementById('statusText'),
@@ -218,25 +246,43 @@
         userTranscript: document.getElementById('userTranscript'),
         evalComment: document.getElementById('evalComment'),
         refText: document.getElementById('refText'),
-        nextBtn: document.getElementById('nextBtn')
+        nextBtn: document.getElementById('nextBtn'),
+        importBtn: document.getElementById('importBtn'),
+        fileInput: document.getElementById('fileInput')
     };
 
     // 4. Web Speech API 初始化
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-        alert("您的浏览器不支持 Web Speech API，请使用最新版 Chrome 或 Edge。");
+        alert("您的浏览器不支持 Web Speech API，请使用最新版 Chrome、Edge 或 Safari。");
     }
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
 
     // 5. 核心逻辑实现
+    
+    // 从缓存加载用户上传的素材
+    function loadMaterials() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed['en-zh']) materials['en-zh'] = [...materials['en-zh'], ...parsed['en-zh']];
+                if (parsed['zh-en']) materials['zh-en'] = [...materials['zh-en'], ...parsed['zh-en']];
+            } catch (e) {
+                console.error("加载本地素材失败", e);
+            }
+        }
+        updateStatsUI();
+    }
+
     function loadNextTask() {
         els.feedbackArea.classList.remove('visible');
         const pool = materials[state.mode].filter(m => m.level === state.difficulty);
         
         if (pool.length === 0) {
-            // 如果当前难度没有题了，降级处理避免卡死
+            // 如果当前难度没有题了，降级处理
             state.difficulty = Math.max(1, state.difficulty - 1);
             loadNextTask();
             return;
@@ -252,7 +298,6 @@
         if (state.isRecording) {
             recognition.stop();
         } else {
-            // 动态设置识别语言：如果模式是英译中，用户说的是中文
             recognition.lang = state.mode === 'en-zh' ? 'zh-CN' : 'en-US';
             try {
                 recognition.start();
@@ -271,7 +316,6 @@
         let hitCount = 0;
         let missing = [];
 
-        // 简单的关键词匹配算法 (统一转小写处理)
         const transcriptLower = transcript.toLowerCase();
         keywords.forEach(kw => {
             if (transcriptLower.includes(kw.toLowerCase())) {
@@ -284,7 +328,6 @@
         const scoreRate = hitCount / keywords.length;
         const score = Math.round(scoreRate * 100);
 
-        // 动态难度计算
         if (score >= 80) {
             state.consecutiveCorrect++;
             state.consecutiveWrong = 0;
@@ -296,7 +339,6 @@
             state.consecutiveWrong = 0;
         }
 
-        // 难度升降级逻辑 (封顶 Level 3，兜底 Level 1)
         if (state.consecutiveCorrect >= 3 && state.difficulty < 3) {
             state.difficulty++;
             state.consecutiveCorrect = 0;
@@ -324,14 +366,15 @@
     }
 
     function updateStatsUI() {
-        els.diffLevel.textContent = `Level ${state.difficulty}`;
+        els.diffLevel.textContent = state.difficulty;
         els.streakCount.textContent = state.consecutiveCorrect;
+        els.totalSentences.textContent = materials[state.mode].length;
     }
 
     // 6. 事件监听
     els.modeSelect.addEventListener('change', (e) => {
         state.mode = e.target.value;
-        state.difficulty = 1; // 切换模式重置难度
+        state.difficulty = 1; 
         state.consecutiveCorrect = 0;
         state.consecutiveWrong = 0;
         loadNextTask();
@@ -340,6 +383,37 @@
     els.recordBtn.addEventListener('click', toggleRecording);
     els.nextBtn.addEventListener('click', loadNextTask);
 
+    // 导入素材事件
+    els.importBtn.addEventListener('click', () => els.fileInput.click());
+    
+    els.fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const newMaterials = JSON.parse(event.target.result);
+                if (!newMaterials['en-zh'] && !newMaterials['zh-en']) {
+                    throw new Error("必须包含 'en-zh' 或 'zh-en'");
+                }
+                
+                const existingSaved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"en-zh":[], "zh-en":[]}');
+                if (newMaterials['en-zh']) existingSaved['en-zh'] = [...existingSaved['en-zh'], ...newMaterials['en-zh']];
+                if (newMaterials['zh-en']) existingSaved['zh-en'] = [...existingSaved['zh-en'], ...newMaterials['zh-en']];
+                
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(existingSaved));
+                
+                alert("素材导入成功！点击确定刷新页面。");
+                location.reload();
+            } catch (error) {
+                alert("导入失败：请检查 JSON 格式。\n" + error.message);
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // 语音识别事件
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         evaluateTranslation(transcript);
@@ -359,7 +433,8 @@
         state.isRecording = false;
     };
 
-    // 初始化第一题
+    // 初始化运行
+    loadMaterials();
     loadNextTask();
 </script>
 
