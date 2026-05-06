@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简口译训练系统</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+            --text-main: #333333;
+            --text-light: #7f8c8d;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .controls select {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .stats {
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .source-text {
+            font-size: 24px;
+            font-weight: 500;
+            margin: 40px 0;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-area {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .record-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .record-btn:hover {
+            background-color: #1a252f;
+        }
+
+        .record-btn.recording {
+            background-color: var(--error-color);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .feedback-area {
+            display: none;
+            background: #f1f8ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .feedback-area.visible {
+            display: block;
+        }
+
+        .score {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .reference {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #ccc;
+            color: var(--text-light);
+        }
+
+        .next-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div class="controls">
+            <select id="modeSelect">
+                <option value="en-zh">英译中 (EN → ZH)</option>
+                <option value="zh-en">中译英 (ZH → EN)</option>
+            </select>
+        </div>
+        <div class="stats">
+            当前难度: <span id="diffLevel">初级 (Level 1)</span> | 
+            连对: <span id="streakCount">0</span>
+        </div>
+    </div>
+
+    <div class="source-text" id="sourceText">
+        请点击下方按钮开始您的口译训练。
+    </div>
+
+    <div class="action-area">
+        <button class="record-btn" id="recordBtn">
+            🎤 开始录音
+        </button>
+        <div id="statusText" style="margin-top: 10px; color: var(--text-light); font-size: 14px;"></div>
+    </div>
+
+    <div class="feedback-area" id="feedbackArea">
+        <div class="score" id="scoreDisplay"></div>
+        <div id="userTranscript"></div>
+        <div id="evalComment"></div>
+        <div class="reference">
+            <strong>参考译文：</strong><br>
+            <span id="refText"></span>
+        </div>
+        <button class="next-btn" id="nextBtn">下一句 →</button>
+    </div>
+</div>
+
+<script>
+    // 1. 模拟数据仓库 (内置示例素材)
+    const materials = {
+        'en-zh': [
+            { level: 1, src: "Hello, nice to meet you.", target: "你好，很高兴见到你。", keywords: ["你好", "高兴", "见到"] },
+            { level: 1, src: "The weather is very good today.", target: "今天天气很好。", keywords: ["今天", "天气", "好"] },
+            { level: 2, src: "We have seen significant growth in our revenue this quarter.", target: "本季度我们的收入出现了显著增长。", keywords: ["季度", "收入", "显著", "增长"] },
+            { level: 2, src: "Please review the attached document before the meeting.", target: "请在会议前审阅随附的文件。", keywords: ["会议", "审阅", "查看", "文件", "附件"] },
+            { level: 3, src: "The implementation of the new policy will invariably lead to a paradigm shift in the industry.", target: "新政策的实施必将导致行业内范式的转变。", keywords: ["政策", "实施", "导致", "行业", "范式", "转变"] }
+        ],
+        'zh-en': [
+            { level: 1, src: "谢谢你的帮助。", target: "Thank you for your help.", keywords: ["thank", "help"] },
+            { level: 2, src: "我们将在下周五举行产品发布会。", target: "We will hold a product launch event next Friday.", keywords: ["hold", "product", "launch", "next", "Friday"] },
+            { level: 3, src: "鉴于目前的市场波动，我们建议采取保守的投资策略。", target: "Given the current market volatility, we recommend adopting a conservative investment strategy.", keywords: ["given", "market", "volatility", "recommend", "conservative", "investment", "strategy"] }
+        ]
+    };
+
+    // 2. 状态管理
+    const state = {
+        mode: 'en-zh',
+        difficulty: 1,
+        consecutiveCorrect: 0,
+        consecutiveWrong: 0,
+        currentTask: null,
+        isRecording: false
+    };
+
+    // 3. DOM 元素绑定
+    const els = {
+        modeSelect: document.getElementById('modeSelect'),
+        diffLevel: document.getElementById('diffLevel'),
+        streakCount: document.getElementById('streakCount'),
+        sourceText: document.getElementById('sourceText'),
+        recordBtn: document.getElementById('recordBtn'),
+        statusText: document.getElementById('statusText'),
+        feedbackArea: document.getElementById('feedbackArea'),
+        scoreDisplay: document.getElementById('scoreDisplay'),
+        userTranscript: document.getElementById('userTranscript'),
+        evalComment: document.getElementById('evalComment'),
+        refText: document.getElementById('refText'),
+        nextBtn: document.getElementById('nextBtn')
+    };
+
+    // 4. Web Speech API 初始化
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("您的浏览器不支持 Web Speech API，请使用最新版 Chrome 或 Edge。");
+    }
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    // 5. 核心逻辑实现
+    function loadNextTask() {
+        els.feedbackArea.classList.remove('visible');
+        const pool = materials[state.mode].filter(m => m.level === state.difficulty);
+        
+        if (pool.length === 0) {
+            // 如果当前难度没有题了，降级处理避免卡死
+            state.difficulty = Math.max(1, state.difficulty - 1);
+            loadNextTask();
+            return;
+        }
+
+        // 随机抽取一句
+        state.currentTask = pool[Math.floor(Math.random() * pool.length)];
+        els.sourceText.textContent = state.currentTask.src;
+        updateStatsUI();
+    }
+
+    function toggleRecording() {
+        if (state.isRecording) {
+            recognition.stop();
+        } else {
+            // 动态设置识别语言：如果模式是英译中，用户说的是中文
+            recognition.lang = state.mode === 'en-zh' ? 'zh-CN' : 'en-US';
+            try {
+                recognition.start();
+                els.statusText.textContent = "正在聆听...";
+                els.recordBtn.classList.add('recording');
+                els.recordBtn.textContent = "⏹ 停止录音";
+                state.isRecording = true;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }
+
+    function evaluateTranslation(transcript) {
+        const { keywords, target } = state.currentTask;
+        let hitCount = 0;
+        let missing = [];
+
+        // 简单的关键词匹配算法 (统一转小写处理)
+        const transcriptLower = transcript.toLowerCase();
+        keywords.forEach(kw => {
+            if (transcriptLower.includes(kw.toLowerCase())) {
+                hitCount++;
+            } else {
+                missing.push(kw);
+            }
+        });
+
+        const scoreRate = hitCount / keywords.length;
+        const score = Math.round(scoreRate * 100);
+
+        // 动态难度计算
+        if (score >= 80) {
+            state.consecutiveCorrect++;
+            state.consecutiveWrong = 0;
+        } else if (score < 50) {
+            state.consecutiveWrong++;
+            state.consecutiveCorrect = 0;
+        } else {
+            state.consecutiveCorrect = 0;
+            state.consecutiveWrong = 0;
+        }
+
+        // 难度升降级逻辑 (封顶 Level 3，兜底 Level 1)
+        if (state.consecutiveCorrect >= 3 && state.difficulty < 3) {
+            state.difficulty++;
+            state.consecutiveCorrect = 0;
+        } else if (state.consecutiveWrong >= 2 && state.difficulty > 1) {
+            state.difficulty--;
+            state.consecutiveWrong = 0;
+        }
+
+        showFeedback(transcript, score, missing, target);
+    }
+
+    function showFeedback(transcript, score, missing, target) {
+        els.userTranscript.innerHTML = `<strong>您的口译：</strong> ${transcript}`;
+        els.scoreDisplay.textContent = `综合评分：${score}分`;
+        els.scoreDisplay.style.color = score >= 80 ? 'var(--success-color)' : (score < 50 ? 'var(--error-color)' : 'var(--accent-color)');
+        
+        let comment = score >= 80 ? "表现不错！关键信息传达完整。" : "还有提升空间。";
+        if (missing.length > 0) {
+            comment += ` 似乎遗漏了以下信息点：[${missing.join(', ')}]。`;
+        }
+        els.evalComment.innerHTML = `<p>${comment}</p>`;
+        els.refText.textContent = target;
+        
+        els.feedbackArea.classList.add('visible');
+    }
+
+    function updateStatsUI() {
+        els.diffLevel.textContent = `Level ${state.difficulty}`;
+        els.streakCount.textContent = state.consecutiveCorrect;
+    }
+
+    // 6. 事件监听
+    els.modeSelect.addEventListener('change', (e) => {
+        state.mode = e.target.value;
+        state.difficulty = 1; // 切换模式重置难度
+        state.consecutiveCorrect = 0;
+        state.consecutiveWrong = 0;
+        loadNextTask();
+    });
+
+    els.recordBtn.addEventListener('click', toggleRecording);
+    els.nextBtn.addEventListener('click', loadNextTask);
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        evaluateTranslation(transcript);
+    };
+
+    recognition.onend = () => {
+        els.statusText.textContent = "";
+        els.recordBtn.classList.remove('recording');
+        els.recordBtn.innerHTML = "🎤 开始录音";
+        state.isRecording = false;
+    };
+
+    recognition.onerror = (event) => {
+        els.statusText.textContent = `识别错误: ${event.error}`;
+        els.recordBtn.classList.remove('recording');
+        els.recordBtn.innerHTML = "🎤 开始录音";
+        state.isRecording = false;
+    };
+
+    // 初始化第一题
+    loadNextTask();
+</script>
+
+</body>
+</html>
