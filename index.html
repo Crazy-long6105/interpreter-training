@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简口译训练系统 v1.1</title>
+    <title>极简口译训练系统 v2.0</title>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -78,85 +78,376 @@
         }
 
         .source-text {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 500;
-            margin: 40px 0;
+            margin: 30px 0 25px;
             text-align: center;
-            min-height: 80px;
+            min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 16px 20px;
+            background: #fafbfc;
+            border-radius: 8px;
+            border: 1px solid #eee;
         }
 
-        .action-area {
-            text-align: center;
-            margin-bottom: 40px;
+        .difficulty-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
         }
 
-        .record-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 18px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
+        .diff-1 { background: #e8f5e9; color: #2e7d32; }
+        .diff-2 { background: #fff3e0; color: #e65100; }
+        .diff-3 { background: #fce4ec; color: #c62828; }
+
+        .workspace {
+            margin-bottom: 30px;
+        }
+
+        .translation-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            font-size: 16px;
+            font-family: inherit;
+            line-height: 1.5;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+            background: #fafbfc;
+        }
+
+        .translation-input:focus {
+            border-color: var(--accent-color);
+            background: #fff;
+        }
+
+        .translation-input::placeholder {
+            color: #bdbdbd;
+        }
+
+        .btn-group {
+            display: flex;
             gap: 10px;
+            margin-top: 12px;
+            align-items: center;
         }
 
-        .record-btn:hover {
-            background-color: #1a252f;
+        .btn {
+            padding: 10px 20px;
+            font-size: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
         }
 
-        .record-btn.recording {
-            background-color: var(--error-color);
-            animation: pulse 1.5s infinite;
+        .btn-submit {
+            background: var(--primary-color);
+            color: #fff;
+            flex: 1;
+            font-weight: 500;
         }
+
+        .btn-submit:hover { background: #1a252f; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+
+        .btn-mic {
+            background: #fff;
+            color: var(--text-main);
+            border: 2px solid #e0e0e0;
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border-radius: 50%;
+        }
+
+        .btn-mic:hover { background: #f5f5f5; border-color: #ccc; }
+        .btn-mic.recording {
+            background: var(--error-color);
+            color: #fff;
+            border-color: var(--error-color);
+            animation: pulse 1.2s infinite;
+        }
+
+        .btn-skip {
+            background: none;
+            color: var(--text-light);
+            border: none;
+            padding: 10px 12px;
+            font-size: 14px;
+        }
+
+        .btn-skip:hover { color: var(--text-main); }
 
         @keyframes pulse {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.08); }
             100% { transform: scale(1); }
         }
 
+        .status-line {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 8px;
+            min-height: 20px;
+        }
+
         .feedback-area {
-            display: none;
-            background: #f1f8ff;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
+            max-height: 0;
+            overflow: hidden;
+            background: #f8faff;
+            border-radius: 10px;
+            transition: max-height 0.4s ease, padding 0.4s ease, margin 0.4s ease;
+            padding: 0 24px;
+            margin-top: 0;
+            border: 0 solid transparent;
         }
 
         .feedback-area.visible {
-            display: block;
+            max-height: 800px;
+            padding: 24px;
+            margin-top: 20px;
+            border-width: 1px;
+            border-color: #e8edf5;
         }
 
-        .score {
-            font-size: 20px;
-            font-weight: bold;
-            color: var(--accent-color);
-            margin-bottom: 10px;
+        .score-board {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
         }
 
-        .reference {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px dashed #ccc;
+        .score-card {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            padding: 14px 16px;
+            text-align: center;
+            border: 1px solid #eef;
+        }
+
+        .score-card .score-val {
+            font-size: 28px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .score-card .score-label {
+            font-size: 12px;
             color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .score-good { color: var(--success-color); }
+        .score-mid { color: #f39c12; }
+        .score-bad { color: var(--error-color); }
+
+        .score-source {
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 4px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .source-ai {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .source-local {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .score-card.ai-active {
+            border-color: #a5d6a7;
+            background: #f1f8e9;
+        }
+
+        .score-card.local-active {
+            border-color: #ffcc80;
+            background: #fff8e1;
+        }
+
+        .feedback-section {
+            margin-top: 16px;
+        }
+
+        .tips-card {
+            background: #fff;
+            border-left: 4px solid var(--accent-color);
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 12px;
+        }
+
+        .tips-card h4 {
+            margin: 0 0 6px;
+            font-size: 14px;
+            color: var(--accent-color);
+        }
+
+        .tips-card p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        .reference-block {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px dashed #ddd;
+        }
+
+        .reference-block strong {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+
+        .reference-block span {
+            color: var(--text-main);
+            display: block;
+            margin-top: 4px;
         }
 
         .next-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
+            margin-top: 18px;
+            padding: 10px 24px;
             background-color: var(--success-color);
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
+            font-size: 15px;
+            font-family: inherit;
         }
+
+        .next-btn:hover { background: #27ae60; }
+
+        .settings-btn {
+            background: none;
+            border: 1px solid #ddd;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            line-height: 1;
+        }
+        .settings-btn:hover { background: #f0f0f0; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px;
+            max-width: 440px;
+            width: 90%;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .modal h3 { margin: 0 0 16px; font-size: 18px; }
+
+        /* 切换开关 */
+        .toggle-row {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 20px; padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .toggle-label { font-size: 14px; color: var(--text-light); }
+        .toggle-switch {
+            position: relative; display: inline-block;
+            width: 48px; height: 26px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc; border-radius: 26px;
+            transition: 0.25s;
+        }
+        .toggle-slider::before {
+            content: ""; position: absolute;
+            height: 20px; width: 20px; left: 3px; bottom: 3px;
+            background: #fff; border-radius: 50%;
+            transition: 0.25s;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--accent-color);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* 模式状态 */
+        .mode-info {
+            padding: 16px; border-radius: 8px;
+            margin-bottom: 4px;
+        }
+        .mode-default { background: #e8f5e9; }
+        .mode-status { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+        .mode-default .mode-status { color: #2e7d32; }
+        .mode-detail { font-size: 12px; color: #666; }
+
+        /* 自定义输入 */
+        .custom-inputs { margin-bottom: 4px; }
+        .custom-inputs label {
+            display: block; font-size: 13px;
+            color: var(--text-light); margin-bottom: 4px; margin-top: 12px;
+        }
+        .custom-inputs input {
+            width: 100%; padding: 10px 12px; border: 1px solid #ddd;
+            border-radius: 6px; font-size: 14px; box-sizing: border-box;
+            font-family: inherit;
+        }
+        .custom-inputs input:focus {
+            border-color: var(--accent-color); outline: none;
+        }
+        .custom-inputs input.input-error { border-color: var(--error-color); }
+        .field-error {
+            font-size: 12px; color: var(--error-color);
+            margin-top: 2px; min-height: 16px;
+        }
+
+        .modal-btns {
+            display: flex; gap: 10px; margin-top: 20px;
+            justify-content: flex-end;
+        }
+        .modal-btns button {
+            padding: 8px 20px; border-radius: 6px; border: none;
+            font-size: 14px; cursor: pointer; font-family: inherit;
+        }
+        .btn-save { background: var(--primary-color); color: #fff; }
+        .btn-save:hover { background: #1a252f; }
+        .btn-save:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-cancel { background: #eee; color: #666; }
+        .btn-cancel:hover { background: #ddd; }
     </style>
 </head>
 <body>
@@ -170,6 +461,7 @@
             </select>
             <!-- 导入素材按钮 -->
             <button id="importBtn" class="import-btn">📁 导入素材</button>
+            <button id="settingsBtn" class="settings-btn" title="AI 设置">⚙️</button>
             <input type="file" id="fileInput" accept=".json" style="display: none;">
         </div>
         <div class="stats">
@@ -183,115 +475,360 @@
         加载中...
     </div>
 
-    <div class="action-area">
-        <button class="record-btn" id="recordBtn">
-            🎤 开始录音
-        </button>
-        <div id="statusText" style="margin-top: 10px; color: var(--text-light); font-size: 14px;"></div>
+    <div class="workspace">
+        <textarea
+            class="translation-input"
+            id="userInput"
+            placeholder="在此输入你的翻译，按 Enter 提交..."
+            autofocus
+        ></textarea>
+        <div class="btn-group">
+            <button class="btn btn-submit" id="submitBtn">提交答案 (Enter)</button>
+            <button class="btn btn-mic" id="micBtn" title="语音输入">🎤</button>
+            <button class="btn btn-skip" id="skipBtn">跳过 →</button>
+        </div>
+        <div class="status-line" id="statusText"></div>
     </div>
 
     <div class="feedback-area" id="feedbackArea">
-        <div class="score" id="scoreDisplay"></div>
-        <div id="userTranscript"></div>
-        <div id="evalComment"></div>
-        <div class="reference">
-            <strong>参考译文：</strong><br>
+        <div class="score-board">
+            <div class="score-card">
+                <div class="score-val" id="scoreSemantic">-</div>
+                <div class="score-label">语义匹配</div>
+            </div>
+            <div class="score-card" id="structCard">
+                <div class="score-val" id="scoreStructure">-</div>
+                <div class="score-label">结构与流畅</div>
+                <div class="score-source" id="scoreSource"></div>
+            </div>
+            <div class="score-card">
+                <div class="score-val" id="scoreOverall">-</div>
+                <div class="score-label">综合评分</div>
+            </div>
+        </div>
+        <div class="feedback-section">
+            <div id="evalComment"></div>
+        </div>
+        <div class="tips-card" id="tipsCard" style="display:none;">
+            <h4>翻译技巧解析</h4>
+            <p id="tipsContent"></p>
+        </div>
+        <div class="reference-block">
+            <strong>参考译文</strong>
             <span id="refText"></span>
         </div>
         <button class="next-btn" id="nextBtn">下一句 →</button>
     </div>
 </div>
 
+<!-- 设置弹窗 -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <h3>⚙️ AI 模型设置</h3>
+
+        <!-- 模式切换开关 -->
+        <div class="toggle-row">
+            <span class="toggle-label">默认模式</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="customModeToggle">
+                <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-label">自定义模式</span>
+        </div>
+
+        <!-- 默认模式状态 -->
+        <div id="defaultModeInfo" class="mode-info mode-default">
+            <div class="mode-status">✅ 当前使用系统默认模型</div>
+            <div class="mode-detail">
+                由官方提供服务，无需任何配置，开箱即用。
+            </div>
+        </div>
+
+        <!-- 自定义模式输入区 -->
+        <div id="customModeInputs" class="custom-inputs" style="display:none;">
+            <label for="customApiUrl">API URL</label>
+            <input type="text" id="customApiUrl" placeholder="https://api.openai.com/v1/chat/completions">
+            <div class="field-error" id="urlError"></div>
+
+            <label for="customApiKey">API Key</label>
+            <input type="password" id="customApiKey" placeholder="sk-xxxxx">
+            <div class="field-error" id="keyError"></div>
+
+            <label for="customModel">Model Name</label>
+            <input type="text" id="customModel" placeholder="例如：gpt-4o, glm-4-flash">
+            <div class="field-error" id="modelError"></div>
+        </div>
+
+        <div class="modal-btns">
+            <button class="btn-cancel" id="settingsCancel">取消</button>
+            <button class="btn-save" id="settingsSave" disabled>保存</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    // 1. 模拟数据仓库 (内置示例素材)
-    // 1. 模拟数据仓库 (内置扩充版)
+    // ========== V2.0 数据仓库 ==========
     const materials = {
         'en-zh': [
-            // Level 1: 简短日常对话
-            { level: 1, src: "Hello, nice to meet you.", target: "你好，很高兴见到你。", keywords: ["你好", "高兴", "见到"] },
-            { level: 1, src: "The weather is very good today.", target: "今天天气很好。", keywords: ["今天", "天气", "好"] },
-            { level: 1, src: "Can I have the menu, please?", target: "请给我菜单好吗？", keywords: ["菜单", "请"] },
-            { level: 1, src: "What time is the flight?", target: "航班几点起飞？", keywords: ["航班", "几点", "时间"] },
-            { level: 1, src: "I need a glass of water.", target: "我需要一杯水。", keywords: ["需要", "一杯", "水"] },
-            // Level 2: 中等长度商务/工作交流
-            { level: 2, src: "We have seen significant growth in our revenue this quarter.", target: "本季度我们的收入出现了显著增长。", keywords: ["季度", "收入", "显著", "增长"] },
-            { level: 2, src: "Please review the attached document before the meeting.", target: "请在会议前审阅随附的文件。", keywords: ["会议", "审阅", "查看", "文件", "附件"] },
-            { level: 2, src: "Our team will finish the software update by tomorrow morning.", target: "我们的团队将在明早前完成软件更新。", keywords: ["团队", "软件", "更新", "明早", "完成"] },
-            { level: 2, src: "The project deadline has been extended to next Friday.", target: "项目截止日期已延期至下周五。", keywords: ["项目", "截止日期", "延期", "下周五"] },
-            { level: 2, src: "Can you provide a brief summary of the client's requirements?", target: "你能简要总结一下客户的需求吗？", keywords: ["总结", "客户", "需求"] },
-            // Level 3: 较长、结构复杂的正式/学术表达
-            { level: 3, src: "The implementation of the new policy will invariably lead to a paradigm shift in the industry.", target: "新政策的实施必将导致行业内范式的转变。", keywords: ["政策", "实施", "导致", "行业", "范式", "转变"] },
-            { level: 3, src: "Despite the economic downturn, our company managed to secure a substantial round of funding.", target: "尽管经济低迷，我们公司还是设法获得了一笔可观的融资。", keywords: ["尽管", "经济低迷", "公司", "获得", "融资"] },
-            { level: 3, src: "Artificial intelligence algorithm design requires balancing computational efficiency with accuracy.", target: "人工智能算法设计需要在计算效率与准确性之间取得平衡。", keywords: ["人工智能", "算法", "设计", "计算效率", "准确性", "平衡"] }
+            { level: 1, src: "Hello, nice to meet you.", target: "你好，很高兴见到你。", keywords: ["你好", "高兴", "见到"], focus: "greeting", focus_desc: "日常问候", explanation: "中文问候语习惯用'很高兴'来表达礼貌，比直译更自然。" },
+            { level: 1, src: "The weather is very good today.", target: "今天天气很好。", keywords: ["今天", "天气", "好"], focus: "topic_comment", focus_desc: "话题-述题结构", explanation: "中文倾向用话题-述题结构，先说'今天天气'作话题，再说'很好'。英文的 there be / it is 结构不翻译。" },
+            { level: 1, src: "Can I have the menu, please?", target: "请给我菜单好吗？", keywords: ["菜单", "请"], focus: "politeness", focus_desc: "礼貌表达转换", explanation: "英文用 Can I have... 表请求，中文习惯用'请...好吗'的疑问句式。" },
+            { level: 1, src: "What time is the flight?", target: "航班几点起飞？", keywords: ["航班", "几点", "时间"], focus: "verb_reorder", focus_desc: "动词顺序调整", explanation: "英文 time 作表语，中文转为动作'几点起飞'，更符合中文动态表达习惯。" },
+            { level: 1, src: "I need a glass of water.", target: "我需要一杯水。", keywords: ["需要", "一杯", "水"], focus: "quantifier", focus_desc: "量词使用", explanation: "英文 a glass of 用冠词+名词+of，中文对应使用量词'一杯'。" },
+            { level: 2, src: "We have seen significant growth in our revenue this quarter.", target: "本季度我们的收入出现了显著增长。", keywords: ["季度", "收入", "显著", "增长"], focus: "word_order", focus_desc: "状语前置", explanation: "英文时间状语 this quarter 在句尾，中文习惯将时间'本季度'放在句首。" },
+            { level: 2, src: "Please review the attached document before the meeting.", target: "请在会议前审阅随附的文件。", keywords: ["会议", "审阅", "查看", "文件", "附件"], focus: "clause_order", focus_desc: "从属句语序", explanation: "英文 before 从句可后置，中文'在……前'需前置。" },
+            { level: 2, src: "Our team will finish the software update by tomorrow morning.", target: "我们的团队将在明早前完成软件更新。", keywords: ["团队", "软件", "更新", "明早", "完成"], focus: "preposition", focus_desc: "介词结构处理", explanation: "英文 by + 时间 表示截止，中文用'在……前/之前'处理。" },
+            { level: 2, src: "The project deadline has been extended to next Friday.", target: "项目截止日期已延期至下周五。", keywords: ["项目", "截止日期", "延期", "下周五"], focus: "passive_voice", focus_desc: "被动语态转换", explanation: "英文用 has been extended 被动语态，中文用'已延期'即可，不必译出被动标记。" },
+            { level: 2, src: "Can you provide a brief summary of the client's requirements?", target: "你能简要总结一下客户的需求吗？", keywords: ["总结", "客户", "需求"], focus: "nominalization", focus_desc: "名词化转动词", explanation: "英文名词 summary 转为中文动词'总结'，更符合中文多用动词的习惯。" },
+            { level: 3, src: "The implementation of the new policy will invariably lead to a paradigm shift in the industry.", target: "新政策的实施必将导致行业内范式的转变。", keywords: ["政策", "实施", "导致", "行业", "范式", "转变"], focus: "long_sentence", focus_desc: "长句拆解", explanation: "英文长名词短语作主语，中文按原文顺序铺排即可，核心是主谓宾：'实施→导致→转变'。" },
+            { level: 3, src: "Despite the economic downturn, our company managed to secure a substantial round of funding.", target: "尽管经济低迷，我们公司还是设法获得了一笔可观的融资。", keywords: ["尽管", "经济低迷", "公司", "获得", "融资"], focus: "concession", focus_desc: "让步状语处理", explanation: "英文 Despite + 名词，中文对应'尽管……还是……'的转折句式。" },
+            { level: 3, src: "Artificial intelligence algorithm design requires balancing computational efficiency with accuracy.", target: "人工智能算法设计需要在计算效率与准确性之间取得平衡。", keywords: ["人工智能", "算法", "设计", "计算效率", "准确性", "平衡"], focus: "verb_object", focus_desc: "动宾结构转换", explanation: "英文 V-ing 作宾语 (balancing...)，中文处理为'在……之间取得平衡'。" }
         ],
         'zh-en': [
-            // Level 1
-            { level: 1, src: "谢谢你的帮助。", target: "Thank you for your help.", keywords: ["thank", "help"] },
-            { level: 1, src: "请问洗手间在哪里？", target: "Excuse me, where is the restroom?", keywords: ["excuse", "where", "restroom", "toilet"] },
-            { level: 1, src: "我们现在出发吧。", target: "Let's go now.", keywords: ["let", "go", "now"] },
-            { level: 1, src: "这个多少钱？", target: "How much is this?", keywords: ["how", "much"] },
-            // Level 2
-            { level: 2, src: "我们将在下周五举行产品发布会。", target: "We will hold a product launch event next Friday.", keywords: ["hold", "product", "launch", "next", "Friday"] },
-            { level: 2, src: "请确保所有的数据都已备份。", target: "Please ensure that all data has been backed up.", keywords: ["ensure", "make sure", "all", "data", "backed up"] },
-            { level: 2, src: "抱歉我迟到了，路上交通很拥堵。", target: "Sorry I'm late, the traffic was heavy.", keywords: ["sorry", "late", "traffic", "heavy", "bad"] },
-            // Level 3
-            { level: 3, src: "鉴于目前的市场波动，我们建议采取保守的投资策略。", target: "Given the current market volatility, we recommend adopting a conservative investment strategy.", keywords: ["given", "market", "volatility", "recommend", "conservative", "investment", "strategy"] },
-            { level: 3, src: "优化系统架构是为了支持未来更多用户的并发访问。", target: "Optimizing the system architecture is to support concurrent access by more users in the future.", keywords: ["optimizing", "system", "architecture", "support", "concurrent", "access", "future"] }
+            { level: 1, src: "谢谢你的帮助。", target: "Thank you for your help.", keywords: ["thank", "help"], focus: "formula", focus_desc: "固定搭配", explanation: "中文'谢谢...'直译即可，英文习惯 Thank you for + 名词。" },
+            { level: 1, src: "请问洗手间在哪里？", target: "Excuse me, where is the restroom?", keywords: ["excuse", "where", "restroom", "toilet"], focus: "politeness_en", focus_desc: "英文礼貌用语", explanation: "中文'请问'对应英文 Excuse me 开头，比直接问更符合英文礼貌习惯。" },
+            { level: 1, src: "我们现在出发吧。", target: "Let's go now.", keywords: ["let", "go", "now"], focus: "suggestion", focus_desc: "建议句式", explanation: "中文'吧'表建议，英文用 Let's 祈使句式。" },
+            { level: 1, src: "这个多少钱？", target: "How much is this?", keywords: ["how", "much"], focus: "question", focus_desc: "疑问词转换", explanation: "中文'多少'直接对应英文 How much，语序调整为疑问句语序。" },
+            { level: 2, src: "我们将在下周五举行产品发布会。", target: "We will hold a product launch event next Friday.", keywords: ["hold", "product", "launch", "next", "Friday"], focus: "future_tense", focus_desc: "将来时与动词选择", explanation: "中文'将'对应 will，'举行'译为 hold（不是 have）。注意时间状语 next Friday 放在句末。" },
+            { level: 2, src: "请确保所有的数据都已备份。", target: "Please ensure that all data has been backed up.", keywords: ["ensure", "make sure", "all", "data", "backed up"], focus: "clause_en", focus_desc: "宾语从句补全", explanation: "中文'确保...'后面是一个句子，译成英文需补全 that 引导的宾语从句。" },
+            { level: 2, src: "抱歉我迟到了，路上交通很拥堵。", target: "Sorry I'm late, the traffic was heavy.", keywords: ["sorry", "late", "traffic", "heavy", "bad"], focus: "parataxis", focus_desc: "意合转形合", explanation: "中文两句话没有连接词（意合），英文可用逗号连接两个独立从句，或加 because 显化因果。" },
+            { level: 3, src: "鉴于目前的市场波动，我们建议采取保守的投资策略。", target: "Given the current market volatility, we recommend adopting a conservative investment strategy.", keywords: ["given", "market", "volatility", "recommend", "conservative", "investment", "strategy"], focus: "hypotaxis", focus_desc: "形合结构构建", explanation: "中文'鉴于...'是书面语，英文 Given + 名词起句，后接主句。建议用 recommend V-ing 结构。" },
+            { level: 3, src: "优化系统架构是为了支持未来更多用户的并发访问。", target: "Optimizing the system architecture is to support concurrent access by more users in the future.", keywords: ["optimizing", "system", "architecture", "support", "concurrent", "access", "future"], focus: "gerund_subject", focus_desc: "动名词作主语", explanation: "中文'优化架构'是话题，英文用 V-ing 作主语 (Optimizing... is to...)。中文动词连用 → 英文动名词。" }
         ]
     };
 
-    // 1.1 本地存储常量
-    const STORAGE_KEY = 'interpreter_materials_v1';
+    // ========== 本地存储常量 ==========
+    const STORAGE_KEY = 'interpreter_materials_v2';
 
-    // 2. 状态管理
+    // ========== 状态管理 ==========
     const state = {
         mode: 'en-zh',
         difficulty: 1,
         consecutiveCorrect: 0,
         consecutiveWrong: 0,
         currentTask: null,
-        lastTaskSrc: null, // 新增：记录上一次的题目原文，用于去重
+        lastTaskSrc: null,
         isRecording: false
     };
 
-    // 3. DOM 元素绑定
+    // ========== DOM 绑定 ==========
     const els = {
         modeSelect: document.getElementById('modeSelect'),
         diffLevel: document.getElementById('diffLevel'),
         streakCount: document.getElementById('streakCount'),
         totalSentences: document.getElementById('totalSentences'),
         sourceText: document.getElementById('sourceText'),
-        recordBtn: document.getElementById('recordBtn'),
+        userInput: document.getElementById('userInput'),
+        submitBtn: document.getElementById('submitBtn'),
+        micBtn: document.getElementById('micBtn'),
+        skipBtn: document.getElementById('skipBtn'),
         statusText: document.getElementById('statusText'),
         feedbackArea: document.getElementById('feedbackArea'),
-        scoreDisplay: document.getElementById('scoreDisplay'),
-        userTranscript: document.getElementById('userTranscript'),
+        scoreSemantic: document.getElementById('scoreSemantic'),
+        scoreStructure: document.getElementById('scoreStructure'),
+        scoreOverall: document.getElementById('scoreOverall'),
+        scoreSource: document.getElementById('scoreSource'),
+        structCard: document.getElementById('structCard'),
         evalComment: document.getElementById('evalComment'),
+        tipsCard: document.getElementById('tipsCard'),
+        tipsContent: document.getElementById('tipsContent'),
         refText: document.getElementById('refText'),
         nextBtn: document.getElementById('nextBtn'),
         importBtn: document.getElementById('importBtn'),
-        fileInput: document.getElementById('fileInput')
+        fileInput: document.getElementById('fileInput'),
+        settingsBtn: document.getElementById('settingsBtn'),
+        settingsModal: document.getElementById('settingsModal'),
+        settingsSave: document.getElementById('settingsSave'),
+        settingsCancel: document.getElementById('settingsCancel'),
+        customModeToggle: document.getElementById('customModeToggle'),
+        defaultModeInfo: document.getElementById('defaultModeInfo'),
+        customModeInputs: document.getElementById('customModeInputs'),
+        customApiUrl: document.getElementById('customApiUrl'),
+        customApiKey: document.getElementById('customApiKey'),
+        customModel: document.getElementById('customModel'),
+        urlError: document.getElementById('urlError'),
+        keyError: document.getElementById('keyError'),
+        modelError: document.getElementById('modelError')
     };
 
-    // 4. Web Speech API 初始化
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        alert("您的浏览器不支持 Web Speech API，请使用最新版 Chrome、Edge 或 Safari。");
-    }
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    // ========== AI 评估配置 ==========
+    const AI_DEFAULTS = Object.freeze({
+        apiUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        model: 'glm-4-flash',
+        apiKey: '',
+        timeout: 20000
+    });
 
-    // 5. 核心逻辑实现
-    
-    // 从缓存加载用户上传的素材
-    function loadMaterials() {
-        const saved = localStorage.getItem(STORAGE_KEY);
+    let AI_CONFIG = { ...AI_DEFAULTS };
+    let isCustomMode = false;
+
+    function loadAIConfig() {
+        const saved = localStorage.getItem('interpreter_ai_config_v2');
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (parsed['en-zh']) materials['en-zh'] = [...materials['en-zh'], ...parsed['en-zh']];
-                if (parsed['zh-en']) materials['zh-en'] = [...materials['zh-en'], ...parsed['zh-en']];
+                if (parsed.customMode && parsed.apiUrl && parsed.apiKey && parsed.model) {
+                    AI_CONFIG = {
+                        apiUrl: parsed.apiUrl,
+                        apiKey: parsed.apiKey,
+                        model: parsed.model,
+                        timeout: AI_DEFAULTS.timeout
+                    };
+                    isCustomMode = true;
+                }
+            } catch (e) { /* ignore */ }
+        }
+    }
+
+    function applyCustomModeUI() {
+        els.customModeToggle.checked = isCustomMode;
+        els.defaultModeInfo.style.display = isCustomMode ? 'none' : 'block';
+        els.customModeInputs.style.display = isCustomMode ? 'block' : 'none';
+        els.settingsSave.disabled = true;
+        clearFieldErrors();
+
+        if (isCustomMode) {
+            // 只回填用户自己保存的自定义配置
+            els.customApiUrl.value = '';
+            els.customApiKey.value = '';
+            els.customModel.value = '';
+
+            // 如果之前保存过自定义配置，回填用户自己的值
+            const saved = localStorage.getItem('interpreter_ai_config_v2');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.customMode) {
+                        els.customApiUrl.value = parsed.apiUrl || '';
+                        els.customApiKey.value = parsed.apiKey || '';
+                        els.customModel.value = parsed.model || '';
+                    }
+                } catch (e) { /* ignore */ }
+            }
+        }
+    }
+
+    function clearFieldErrors() {
+        els.urlError.textContent = '';
+        els.keyError.textContent = '';
+        els.modelError.textContent = '';
+        els.customApiUrl.classList.remove('input-error');
+        els.customApiKey.classList.remove('input-error');
+        els.customModel.classList.remove('input-error');
+    }
+
+    function validateCustomFields() {
+        clearFieldErrors();
+        let valid = true;
+
+        const url = els.customApiUrl.value.trim();
+        const key = els.customApiKey.value.trim();
+        const model = els.customModel.value.trim();
+
+        if (!url) {
+            els.urlError.textContent = 'API URL 不能为空';
+            els.customApiUrl.classList.add('input-error');
+            valid = false;
+        } else if (url === AI_DEFAULTS.apiUrl) {
+            els.urlError.textContent = '自定义模式下，不能填写系统默认 API 地址';
+            els.customApiUrl.classList.add('input-error');
+            valid = false;
+        }
+
+        if (!key) {
+            els.keyError.textContent = 'API Key 不能为空';
+            els.customApiKey.classList.add('input-error');
+            valid = false;
+        }
+
+        if (!model) {
+            els.modelError.textContent = 'Model Name 不能为空';
+            els.customModel.classList.add('input-error');
+            valid = false;
+        }
+
+        els.settingsSave.disabled = !valid;
+        return valid;
+    }
+
+    function saveAIConfig() {
+        if (isCustomMode) {
+            // 自定义模式：最终校验
+            if (!validateCustomFields()) return;
+
+            AI_CONFIG = {
+                apiUrl: els.customApiUrl.value.trim(),
+                apiKey: els.customApiKey.value.trim(),
+                model: els.customModel.value.trim(),
+                timeout: AI_DEFAULTS.timeout
+            };
+
+            localStorage.setItem('interpreter_ai_config_v2', JSON.stringify({
+                customMode: true,
+                apiUrl: AI_CONFIG.apiUrl,
+                apiKey: AI_CONFIG.apiKey,
+                model: AI_CONFIG.model
+            }));
+
+            els.settingsModal.classList.remove('open');
+            els.statusText.textContent = '✅ 已切换至自定义模型';
+        } else {
+            // 默认模式：清空所有自定义配置
+            AI_CONFIG = { ...AI_DEFAULTS };
+            isCustomMode = false;
+
+            localStorage.removeItem('interpreter_ai_config_v2');
+
+            els.settingsModal.classList.remove('open');
+            els.statusText.textContent = '✅ 已恢复系统默认设置';
+        }
+
+        setTimeout(() => { if (els.statusText.textContent.includes('AI')) els.statusText.textContent = ''; }, 3000);
+    }
+
+    // 切换开关事件
+    function onToggleChange() {
+        isCustomMode = els.customModeToggle.checked;
+        applyCustomModeUI();
+        if (!isCustomMode) {
+            // 切回默认 → 立即生效
+            AI_CONFIG = { ...AI_DEFAULTS };
+            localStorage.removeItem('interpreter_ai_config_v2');
+        }
+    }
+
+    // ========== Web Speech API ==========
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+    }
+
+    // ========== 素材加载 (兼容 v1/v2) ==========
+    function loadMaterials() {
+        // 尝试加载 v2 素材
+        let saved = localStorage.getItem(STORAGE_KEY);
+        // 兼容旧版 v1 素材
+        if (!saved) saved = localStorage.getItem('interpreter_materials_v1');
+
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed['en-zh']) {
+                    // 合并，去重
+                    const existingSrcs = new Set(materials['en-zh'].map(m => m.src));
+                    parsed['en-zh'].forEach(m => {
+                        if (!existingSrcs.has(m.src)) materials['en-zh'].push(normalizeMaterial(m));
+                    });
+                }
+                if (parsed['zh-en']) {
+                    const existingSrcs = new Set(materials['zh-en'].map(m => m.src));
+                    parsed['zh-en'].forEach(m => {
+                        if (!existingSrcs.has(m.src)) materials['zh-en'].push(normalizeMaterial(m));
+                    });
+                }
             } catch (e) {
                 console.error("加载本地素材失败", e);
             }
@@ -299,43 +836,63 @@
         updateStatsUI();
     }
 
+    // 规范化素材：为旧版素材补齐 v2 字段
+    function normalizeMaterial(m) {
+        return {
+            level: m.level || 1,
+            src: m.src,
+            target: m.target,
+            keywords: m.keywords || [],
+            focus: m.focus || 'general',
+            focus_desc: m.focus_desc || '综合翻译',
+            explanation: m.explanation || ''
+        };
+    }
+
+    // ========== 题目加载 ==========
     function loadNextTask() {
         els.feedbackArea.classList.remove('visible');
-        
-        // 1. 筛出当前难度的题目池
+        els.userInput.value = '';
+        els.userInput.disabled = false;
+        els.submitBtn.disabled = false;
+        els.micBtn.disabled = false;
+        els.scoreSource.textContent = '';
+        els.structCard.className = 'score-card';
+        els.statusText.textContent = '';
+        els.userInput.focus();
+
         let pool = materials[state.mode].filter(m => m.level === state.difficulty);
-        
+
         if (pool.length === 0) {
-            // 如果当前难度没有题了，降级处理
             state.difficulty = Math.max(1, state.difficulty - 1);
             loadNextTask();
             return;
         }
 
-        // 2. 去重逻辑：如果池子里不止一道题，且存在上一题的记录，就剔除上一题
         if (pool.length > 1 && state.lastTaskSrc) {
             pool = pool.filter(m => m.src !== state.lastTaskSrc);
         }
 
-        // 3. 随机抽取一句
         state.currentTask = pool[Math.floor(Math.random() * pool.length)];
-        
-        // 4. 更新状态
-        state.lastTaskSrc = state.currentTask.src; 
+        state.lastTaskSrc = state.currentTask.src;
         els.sourceText.textContent = state.currentTask.src;
         updateStatsUI();
     }
 
+    // ========== 语音识别 ==========
     function toggleRecording() {
+        if (!recognition) {
+            els.statusText.textContent = "浏览器不支持语音识别";
+            return;
+        }
         if (state.isRecording) {
             recognition.stop();
         } else {
             recognition.lang = state.mode === 'en-zh' ? 'zh-CN' : 'en-US';
             try {
                 recognition.start();
-                els.statusText.textContent = "正在聆听...";
-                els.recordBtn.classList.add('recording');
-                els.recordBtn.textContent = "⏹ 停止录音";
+                els.statusText.textContent = "正在聆听…说完自动停";
+                els.micBtn.classList.add('recording');
                 state.isRecording = true;
             } catch (e) {
                 console.error(e);
@@ -343,27 +900,87 @@
         }
     }
 
-    function evaluateTranslation(transcript) {
-        const { keywords, target } = state.currentTask;
+    recognition && (recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        els.userInput.value = transcript;
+        els.statusText.textContent = "语音已识别，可手动修改后提交";
+    });
+
+    recognition && (recognition.onend = () => {
+        els.micBtn.classList.remove('recording');
+        state.isRecording = false;
+    });
+
+    recognition && (recognition.onerror = (event) => {
+        els.statusText.textContent = "识别失败，请重试";
+        els.micBtn.classList.remove('recording');
+        state.isRecording = false;
+    });
+
+    // ========== 提交评估 ==========
+    async function handleSubmit() {
+        const userText = els.userInput.value.trim();
+        if (!userText) {
+            els.statusText.textContent = "请先输入翻译内容";
+            return;
+        }
+        if (!state.currentTask) return;
+
+        // 禁用输入
+        els.userInput.disabled = true;
+        els.submitBtn.disabled = true;
+        els.micBtn.disabled = true;
+        els.statusText.textContent = "AI 评估中…";
+
+        await evaluateTranslation(userText);
+    }
+
+    async function evaluateTranslation(userText) {
+        const { keywords, target, src, focus_desc, explanation } = state.currentTask;
+        const mode = state.mode; // 'en-zh' or 'zh-en'
+
+        let aiResult = null;
+        let aiError = null;
+        try {
+            aiResult = await callHuggingFace(userText, src, target, mode);
+        } catch (e) {
+            aiError = e.message;
+            console.warn('AI评估失败:', aiError);
+        }
+
+        // --- 语义匹配评分 (关键词) ---
         let hitCount = 0;
         let missing = [];
-
-        const transcriptLower = transcript.toLowerCase();
+        const textLower = userText.toLowerCase();
         keywords.forEach(kw => {
-            if (transcriptLower.includes(kw.toLowerCase())) {
-                hitCount++;
-            } else {
-                missing.push(kw);
-            }
+            textLower.includes(kw.toLowerCase()) ? hitCount++ : missing.push(kw);
         });
+        const semanticScore = keywords.length ? Math.round((hitCount / keywords.length) * 100) : 50;
 
-        const scoreRate = hitCount / keywords.length;
-        const score = Math.round(scoreRate * 100);
+        // --- 结构评分：AI优先，否则回退到启发式 ---
+        let structScore, aiComment;
+        if (aiResult) {
+            structScore = aiResult.structScore;
+            aiComment = aiResult.comment;
+        } else {
+            // 启发式回退
+            const lengthRatio = Math.min(userText.length / Math.max(target.length, 1), 2);
+            structScore = 50;
+            if (lengthRatio > 0.4 && lengthRatio < 1.8) structScore += 20;
+            if (semanticScore >= 60) structScore += 15;
+            if (semanticScore >= 80 && lengthRatio > 0.5 && lengthRatio < 1.5) structScore += 15;
+            structScore = Math.min(structScore, 100);
+            aiComment = null;
+        }
 
-        if (score >= 80) {
+        // --- 综合评分 ---
+        const overallScore = Math.round(semanticScore * 0.6 + structScore * 0.4);
+
+        // --- 难度自适应 ---
+        if (overallScore >= 80) {
             state.consecutiveCorrect++;
             state.consecutiveWrong = 0;
-        } else if (score < 50) {
+        } else if (overallScore < 50) {
             state.consecutiveWrong++;
             state.consecutiveCorrect = 0;
         } else {
@@ -379,45 +996,191 @@
             state.consecutiveWrong = 0;
         }
 
-        showFeedback(transcript, score, missing, target);
+        els.statusText.textContent = aiResult
+            ? "✅ AI 模型评估完成"
+            : `⚠️ AI 不可用(${aiError || '未知'})，已使用本地评估`;
+
+        showFeedback(userText, { semanticScore, structScore, overallScore }, missing, target, focus_desc, explanation, aiResult, aiComment);
     }
 
-    function showFeedback(transcript, score, missing, target) {
-        els.userTranscript.innerHTML = `<strong>您的口译：</strong> ${transcript}`;
-        els.scoreDisplay.textContent = `综合评分：${score}分`;
-        els.scoreDisplay.style.color = score >= 80 ? 'var(--success-color)' : (score < 50 ? 'var(--error-color)' : 'var(--accent-color)');
-        
-        let comment = score >= 80 ? "表现不错！关键信息传达完整。" : "还有提升空间。";
-        if (missing.length > 0) {
-            comment += ` 似乎遗漏了以下信息点：[${missing.join(', ')}]。`;
+    // ========== 智谱 AI 评估调用 ==========
+    async function callHuggingFace(userText, srcText, refText, mode) {
+        const srcLang = mode === 'en-zh' ? '英文' : '中文';
+        const tgtLang = mode === 'en-zh' ? '中文' : '英文';
+
+        const systemPrompt = `你是一个专业的翻译质量评估专家。请根据以下标准评估${srcLang}到${tgtLang}的翻译：
+1. 语义准确度：关键信息是否完整传达
+2. 结构流畅度：译文是否符合目标语言的表达习惯
+3. 用词恰当性：词汇选择是否精准
+
+请给出结构流畅度评分(0-100分)和简短点评(中文，30字以内)。
+严格按格式回复：分数:XX 评语:XXX`;
+
+        const userPrompt = `原文：${srcText}
+参考译文：${refText}
+用户译文：${userText}`;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), AI_CONFIG.timeout);
+
+        const response = await fetch(AI_CONFIG.apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${AI_CONFIG.apiKey}`
+            },
+            body: JSON.stringify({
+                model: AI_CONFIG.model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 100
+            }),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errText = await response.text().catch(() => '');
+            throw new Error(`API ${response.status}: ${errText.slice(0, 80)}`);
         }
-        els.evalComment.innerHTML = `<p>${comment}</p>`;
-        els.refText.textContent = target;
-        
-        els.feedbackArea.classList.add('visible');
+
+        const data = await response.json();
+        const text = data?.choices?.[0]?.message?.content || '';
+        console.log('智谱 AI 响应:', text);
+
+        return parseAIResponse(text);
     }
 
+    function parseAIResponse(text) {
+        const scoreMatch = text.match(/分数[：:]\s*(\d+)/);
+        const commentMatch = text.match(/评语[：:]\s*(.+)/);
+
+        let structScore = 50;
+        if (scoreMatch) {
+            structScore = Math.min(100, Math.max(0, parseInt(scoreMatch[1])));
+        } else {
+            const numMatch = text.match(/\b(\d{1,3})\b/);
+            if (numMatch) {
+                const n = parseInt(numMatch[1]);
+                if (n >= 0 && n <= 100) structScore = n;
+            }
+        }
+
+        const comment = commentMatch ? commentMatch[1].trim() : text.trim();
+        return { structScore, comment };
+    }
+
+    function showFeedback(userText, scores, missing, target, focusDesc, explanation, aiResult, aiComment) {
+        // 语义评分（始终本地）
+        setScoreDisplay(els.scoreSemantic, scores.semanticScore);
+        // 结构评分（标注来源）
+        setScoreDisplay(els.scoreStructure, scores.structScore);
+        if (aiResult) {
+            els.scoreSource.textContent = 'AI 评估';
+            els.scoreSource.className = 'score-source source-ai';
+            els.structCard.className = 'score-card ai-active';
+        } else {
+            els.scoreSource.textContent = '本地评估';
+            els.scoreSource.className = 'score-source source-local';
+            els.structCard.className = 'score-card local-active';
+        }
+        // 综合评分
+        setScoreDisplay(els.scoreOverall, scores.overallScore);
+
+        // 评语
+        let comment = '';
+        const overall = scores.overallScore;
+        if (overall >= 90) comment = "出色！翻译准确且表达地道。";
+        else if (overall >= 80) comment = "不错，关键信息传达完整，表达较流畅。";
+        else if (overall >= 60) comment = "基本达意，部分表达可以优化。";
+        else if (overall >= 40) comment = "大意尚可，但遗漏或偏差较多。";
+        else comment = "还需努力，建议对照参考译文重新理解。";
+
+        if (missing.length > 0) {
+            comment += ` 遗漏信息点：${missing.join('、')}。`;
+        }
+
+        // 评估来源标识
+        let sourceTag = '';
+        if (aiResult && aiComment) {
+            sourceTag = ' <span style="font-size:12px;background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:10px;font-weight:600;">🤖 AI 评估</span>';
+        } else if (!aiResult) {
+            sourceTag = ' <span style="font-size:12px;background:#fff3e0;color:#e65100;padding:3px 10px;border-radius:10px;font-weight:600;">📋 本地评估</span>';
+        }
+        let html = `<p><strong>你的译文：</strong>${escapeHtml(userText)}</p>`;
+        html += `<p style="margin-top:8px;">${comment}${sourceTag}</p>`;
+        if (aiComment) {
+            html += `<p style="margin-top:6px;color:#2e7d32;font-size:14px;background:#f1f8e9;padding:8px 12px;border-radius:6px;">🤖 AI点评：${escapeHtml(aiComment)}</p>`;
+        }
+        els.evalComment.innerHTML = html;
+
+        // 翻译技巧卡片
+        if (explanation) {
+            els.tipsCard.style.display = 'block';
+            els.tipsContent.textContent = focusDesc ? `【${focusDesc}】${explanation}` : explanation;
+        } else {
+            els.tipsCard.style.display = 'none';
+        }
+
+        // 参考译文
+        els.refText.textContent = target;
+
+        // 显示反馈区
+        els.feedbackArea.classList.add('visible');
+        updateStatsUI();
+        els.nextBtn.focus();
+    }
+
+    function setScoreDisplay(el, score) {
+        el.textContent = score;
+        el.className = 'score-val';
+        if (score >= 80) el.classList.add('score-good');
+        else if (score >= 50) el.classList.add('score-mid');
+        else el.classList.add('score-bad');
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ========== UI 更新 ==========
     function updateStatsUI() {
         els.diffLevel.textContent = state.difficulty;
         els.streakCount.textContent = state.consecutiveCorrect;
         els.totalSentences.textContent = materials[state.mode].length;
     }
 
-    // 6. 事件监听
+    // ========== 事件绑定 ==========
+    els.submitBtn.addEventListener('click', handleSubmit);
+    els.nextBtn.addEventListener('click', loadNextTask);
+    els.skipBtn.addEventListener('click', loadNextTask);
+    els.micBtn.addEventListener('click', toggleRecording);
+
+    // 回车提交
+    els.userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
+    });
+
+    // 模式切换
     els.modeSelect.addEventListener('change', (e) => {
         state.mode = e.target.value;
-        state.difficulty = 1; 
+        state.difficulty = 1;
         state.consecutiveCorrect = 0;
         state.consecutiveWrong = 0;
         loadNextTask();
     });
 
-    els.recordBtn.addEventListener('click', toggleRecording);
-    els.nextBtn.addEventListener('click', loadNextTask);
-
-    // 导入素材事件
+    // 导入素材
     els.importBtn.addEventListener('click', () => els.fileInput.click());
-    
+
     els.fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -429,13 +1192,15 @@
                 if (!newMaterials['en-zh'] && !newMaterials['zh-en']) {
                     throw new Error("必须包含 'en-zh' 或 'zh-en'");
                 }
-                
+
                 const existingSaved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"en-zh":[], "zh-en":[]}');
-                if (newMaterials['en-zh']) existingSaved['en-zh'] = [...existingSaved['en-zh'], ...newMaterials['en-zh']];
-                if (newMaterials['zh-en']) existingSaved['zh-en'] = [...existingSaved['zh-en'], ...newMaterials['zh-en']];
-                
+                ['en-zh', 'zh-en'].forEach(mode => {
+                    if (newMaterials[mode]) {
+                        existingSaved[mode] = [...existingSaved[mode], ...newMaterials[mode].map(normalizeMaterial)];
+                    }
+                });
+
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(existingSaved));
-                
                 alert("素材导入成功！点击确定刷新页面。");
                 location.reload();
             } catch (error) {
@@ -445,27 +1210,24 @@
         reader.readAsText(file);
     });
 
-    // 语音识别事件
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        evaluateTranslation(transcript);
-    };
+    // 设置面板
+    els.settingsBtn.addEventListener('click', () => {
+        applyCustomModeUI();
+        els.settingsModal.classList.add('open');
+    });
+    els.settingsCancel.addEventListener('click', () => els.settingsModal.classList.remove('open'));
+    els.settingsSave.addEventListener('click', saveAIConfig);
+    els.settingsModal.addEventListener('click', (e) => {
+        if (e.target === els.settingsModal) els.settingsModal.classList.remove('open');
+    });
+    els.customModeToggle.addEventListener('change', onToggleChange);
+    // 实时校验
+    els.customApiUrl.addEventListener('input', () => { if (isCustomMode) validateCustomFields(); });
+    els.customApiKey.addEventListener('input', () => { if (isCustomMode) validateCustomFields(); });
+    els.customModel.addEventListener('input', () => { if (isCustomMode) validateCustomFields(); });
 
-    recognition.onend = () => {
-        els.statusText.textContent = "";
-        els.recordBtn.classList.remove('recording');
-        els.recordBtn.innerHTML = "🎤 开始录音";
-        state.isRecording = false;
-    };
-
-    recognition.onerror = (event) => {
-        els.statusText.textContent = `识别错误: ${event.error}`;
-        els.recordBtn.classList.remove('recording');
-        els.recordBtn.innerHTML = "🎤 开始录音";
-        state.isRecording = false;
-    };
-
-    // 初始化运行
+    // ========== 启动 ==========
+    loadAIConfig();
     loadMaterials();
     loadNextTask();
 </script>
